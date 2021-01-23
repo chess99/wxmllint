@@ -3,7 +3,7 @@
 > An unofficial wxml linter and validator.  
 > fork and modified from [htmllint](https://github.com/htmllint/htmllint)  
 
-目前可用的rc文件 [.htmllintrc](./.htmllintrc)  
+目前可用的rc文件 [.wxmllintrc](./.wxmllintrc)  
 
 ### TODO
 

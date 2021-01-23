@@ -1,0 +1,186 @@
+#!/usr/bin/env node
+
+var chalk = require('chalk'),
+    cjson = require('cjson'),
+    Liftoff = require('liftoff'),
+    fs = require('fs'),
+    glob = require('glob'),
+    path = require('path'),
+    Promise = require('bluebird');
+
+var readFilePromise = Promise.promisify(fs.readFile),
+    globPromise = Promise.promisify(glob);
+
+var app = new Liftoff({
+    processTitle: 'wxmllint',
+    moduleName: 'wxmllint',
+    configName: '.wxmllint',
+    extensions: {
+        'rc': null
+    }
+});
+
+var argv = require('yargs')
+        .usage([
+            'Lints wxml files with wxmllint.',
+            'Usage: $0 [OPTIONS] [ARGS]'
+        ].join('\n'))
+        .example('$0', 'lints all wxml files in the cwd and all child directories')
+        .example('$0 init', 'creates a default .wxmllintrc in the cwd')
+        .example('$0 *.wxml', 'lints all wxml files in the cwd')
+        .example('$0 public/*.wxml', 'lints all wxml files in the public directory')
+        .default('rc', null)
+        .describe('rc', 'path to a wxmllintrc file to use (json)')
+        .option('format', {
+            describe: 'format to output',
+            choices: ['simple', 'json'],
+            default: 'simple'
+        })
+        .default('cwd', null)
+        .describe('cwd', 'path to use for the current working directory')
+        .default('stdin', false)
+        .describe('stdin', 'accept input from stdin (using option value for filename in output)')
+        .argv;
+
+var STDIN_FILENO = 0;
+var args = argv._;
+
+app.launch({
+    cwd: argv.cwd,
+    configPath: argv.rc
+}, function (env) {
+    var cwd = argv.cwd || process.cwd();
+
+    var wxmllintPath = 'wxmllint';
+
+    if (env.modulePath) {
+        var cliPackage = require('../package.json'),
+            semver = require('semver');
+
+        var acceptedRange = cliPackage.dependencies.wxmllint,
+            localVersion = env.modulePackage.version;
+
+        if (semver.satisfies(localVersion, acceptedRange)) {
+            wxmllintPath = env.modulePath;
+        } else {
+            console.log(
+                chalk.red('local wxmllint version is not supported:'),
+                chalk.magenta(localVersion, '!=', acceptedRange)
+            );
+            console.log('using builtin version of wxmllint');
+        }
+    }
+
+    var wxmllint = require(wxmllintPath);
+    var formatters = require('../lib/formatters');
+
+    if (args[0] === 'init') {
+        // copy .wxmllintrc file
+        var srcPath = path.join(__dirname, '../lib/default_cfg.json'),
+            outputPath = path.join(env.cwd, '.wxmllintrc');
+
+        var opts = wxmllint.Linter.getOptions('default'),
+            config = JSON.stringify(opts, null, 4);
+        config = '{\n    "plugins": [],  // npm modules to load\n'
+               + config.slice(1);
+
+        fs.writeFile(outputPath, config, function (err) {
+            if (err) {
+                console.error('error writing config file: ', err);
+            }
+        });
+        return;
+    }
+
+    if (!env.configPath) {
+        console.log(
+            chalk.red('local .wxmllintrc file not found'),
+            '(you can create one using "wxmllint init")'
+        );
+        process.exit(1);
+    }
+
+    var cfg = cjson.load(env.configPath);
+
+    wxmllint.use(cfg.plugins || []);
+    delete cfg.plugins;
+
+    if (argv.stdin) {
+        args.unshift(STDIN_FILENO);
+    }
+    if (!args.length) {
+        args = ['**/*.wxml'];
+    }
+
+    function lintFile(filename) {
+        var p;
+        if (filename === STDIN_FILENO) {
+            filename = argv.stdin === true ? 'stdin' : argv.stdin;
+            p = new Promise(function (resolve, reject) {
+                process.stdin.resume();
+                process.stdin.setEncoding('utf8');
+
+                var content = '';
+                process.stdin.on('data', function (chunk) {
+                    content += chunk;
+                });
+                process.stdin.on('end', function () {
+                    resolve(content);
+                });
+                process.stdin.on('error', function (err) {
+                    reject(err);
+                });
+            });
+        } else {
+            var filepath = path.resolve(cwd, filename);
+            p = readFilePromise(filepath, 'utf8');
+        }
+
+        return p.then(function (src) {
+                return wxmllint(src, cfg);
+            })
+            .then(function (issues) {
+                formatters.formatMessage.call(wxmllint, argv.format, filename, issues);
+                return { errorCount: issues.length };
+            })
+            .catch(function (err) {
+                // MC: muahahahahah :D
+                throw ('[wxmllint error in ' + filename + ' ] ' + err);
+            });
+    }
+
+    Promise.all(
+        args.map(function (pattern) {
+            if (pattern === STDIN_FILENO) {
+                return STDIN_FILENO;
+            }
+            return globPromise(pattern, { cwd: cwd });
+        })
+    ).then(function (filesArr) {
+        var files = Array.prototype.concat.apply([], filesArr);
+
+        return Promise.settle(
+            files.map(lintFile)
+        );
+    }, function (err) {
+        console.error(chalk.red.bold('error during glob expansion:'), err);
+    }).done(function (results) {
+        var errorCount = 0;
+
+        results.forEach(function (result) {
+            if (result.isFulfilled()) {
+                var resultValue = result.value();
+
+                errorCount += resultValue.errorCount;
+            } else {
+                console.error(chalk.bold.red(result.reason()));
+            }
+        });
+
+        formatters.done.call(wxmllint, argv.format, errorCount, results.length);
+
+        if (errorCount > 0) {
+            process.exit(1);
+        }
+    });
+});

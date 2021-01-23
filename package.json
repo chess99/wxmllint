@@ -1,7 +1,10 @@
 {
   "name": "wxmllint",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "description": "An unofficial wxml linter.",
+  "bin": {
+    "wxmllint": "./bin/cli.js"
+  },
   "repository": {
     "type": "git",
     "url": ""
@@ -37,7 +40,9 @@
     "plato": "^1.7.0"
   },
   "dependencies": {
+    "bluebird": "^3.7.2",
     "bulk-require": "^1.0.1",
+    "cjson": "^0.5.0",
     "htmlparser2": "^3.10.1",
     "lodash": "^4.17.11",
     "promise": "^8.0.3"
@@ -50,6 +55,5 @@
   "engines": {
     "node": ">=6"
   },
-  "contributors": [
-  ]
+  "contributors": []
 }
