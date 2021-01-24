@@ -7,16 +7,16 @@
 
 ### TODO
 
-- [ ] "attr-bans"
-- [ ] "attr-name-ignore-regex"
-- [ ] "attr-name-style"
-- [ ] "attr-new-line"
-- [ ] "attr-no-dup"
-- [ ] "attr-no-unsafe-char"
-- [ ] "attr-order"
-- [ ] "attr-quote-style"
-- [ ] "attr-req-value"
-- [ ] "attr-validate"
+- [x] "attr-bans"
+- [x] "attr-name-ignore-regex"
+- [x] "attr-name-style"
+- [x] "attr-new-line"    --建议  3
+- [x] "attr-no-dup"    --建议  true
+- [x] "attr-no-unsafe-char"    --建议  true
+- [x] "attr-order"    --建议 ["/^wx/", "/^(?!wx)/"]
+- [x] "attr-quote-style"    --建议 "quoted"
+- [x] "attr-req-value"    ----建议 false    ----booleanAttrs不能满足自定义属性的需求
+- [x] "attr-validate"    --建议  true
 - [ ] "button-req-content"
 - [ ] "class-no-dup"
 - [ ] "class-style"
@@ -61,8 +61,21 @@
 - [x] "tag-close"
 - [ ] "tag-name-lowercase"
 - [ ] "tag-name-match"
-- [ ] "tag-req-attr"
+- [x] "tag-req-attr"    --建议 {"image": [{"name": "src"}]}
+        -- TODO: 实现个 "tag-no-attr" 来禁止 text 上的 class
 - [ ] "tag-self-close"
 - [ ] "text-ignore-regex"
 - [ ] "title-max-len"
 - [ ] "title-no-dup"
+
+### wxml 中的 attribs
+
+```
+<view wx:if="{{conditionA}}" {{skuList.length}} bindtap="doSth"></view>
+
+====>
+wx:if ---- {{conditionA}}
+{{skuList.length}} ---- 
+bindtap ---- doSth
+```
+
