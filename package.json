@@ -1,6 +1,6 @@
 {
   "name": "wxmllint",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "An unofficial wxml linter.",
   "bin": {
     "wxmllint": "./bin/cli.js"
