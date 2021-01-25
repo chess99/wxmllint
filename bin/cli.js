@@ -52,23 +52,24 @@ app.launch({
     var cwd = argv.cwd || process.cwd();
 
     var wxmllintPath = 'wxmllint';
+    console.log('env.modulePath', env.modulePath);
 
     if (env.modulePath) {
-        var cliPackage = require('../package.json'),
-            semver = require('semver');
+        // var cliPackage = require('../package.json'),
+        //     semver = require('semver');
 
-        var acceptedRange = cliPackage.dependencies.wxmllint,
-            localVersion = env.modulePackage.version;
+        // var acceptedRange = cliPackage.dependencies.wxmllint,
+        //     localVersion = env.modulePackage.version;
 
-        if (semver.satisfies(localVersion, acceptedRange)) {
+        // if (semver.satisfies(localVersion, acceptedRange)) {
             wxmllintPath = env.modulePath;
-        } else {
-            console.log(
-                chalk.red('local wxmllint version is not supported:'),
-                chalk.magenta(localVersion, '!=', acceptedRange)
-            );
-            console.log('using builtin version of wxmllint');
-        }
+        // } else {
+        //     console.log(
+        //         chalk.red('local wxmllint version is not supported:'),
+        //         chalk.magenta(localVersion, '!=', acceptedRange)
+        //     );
+        //     console.log('using builtin version of wxmllint');
+        // }
     }
 
     var wxmllint = require(wxmllintPath);
