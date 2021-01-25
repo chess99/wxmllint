@@ -52,7 +52,6 @@ app.launch({
     var cwd = argv.cwd || process.cwd();
 
     var wxmllintPath = 'wxmllint';
-    console.log('env.modulePath', env.modulePath);
 
     if (env.modulePath) {
         // var cliPackage = require('../package.json'),
